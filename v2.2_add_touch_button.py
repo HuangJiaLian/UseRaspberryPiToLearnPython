@@ -9,7 +9,8 @@ def setVolume(volume):
     if volume >= 0 and volume <=100:
         volumeValue = volume/100.
         pygame.mixer.music.set_volume(volumeValue)
-        print('Volume: ' + str(volumeValue))
+        print('Volume: {:.0f} '.format(volumeValue*100),end='')
+        print('\b' * len('Volume: 100 '), end='', flush=True)
     else:
         print('Ooops, Please set the valid volume.')
 
@@ -152,12 +153,20 @@ def setUp():
     GPIO.setup(17, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
 def detectVolumeChange():    
-    global ser
-    if ser.inWaiting() > 0:
-        data = ser.readline()[:-1]
-        data = int(data)
-        volumeToSet = 100*data/1023
-        setVolume(volumeToSet)
+    global ser, VolumeChangeEnableFlag
+    if VolumeChangeEnableFlag == True:
+        if ser.inWaiting() > 0:
+            data = ser.readline()[:-1]
+            data = int(data)
+            volumeToSet = 100*data/1023
+            setVolume(volumeToSet)
+    else:
+        current_volume = pygame.mixer.music.get_volume()
+        # print(current_volume)
+        if 100 -  current_volume*100 < 10:
+            pass
+        else:
+            setVolume(100.)
 
 def interrupt_handler(channel):
     global RecordingState
@@ -230,6 +239,14 @@ def main():
         else:
             pass
 
-ser = serial.Serial('/dev/ttyACM0',9600)
+VolumeChangeEnableFlag = False
+try:
+    ser = serial.Serial('/dev/ttyACM0',9600)
+    VolumeChangeEnableFlag = True
+    print('Volume Change Enabled.')
+except:
+    VolumeChangeEnableFlag = False
+    print('Volume Change Disabled.')
+    pass
 RecordingState = False
 main()
